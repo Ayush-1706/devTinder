@@ -4,10 +4,13 @@ const bcrypt = require('bcrypt');
 const User = require('./models/user');
 const { validateSignupData } = require('./utils/validation');
 const validator = require('validator');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
-app.use(express.json()); // Middleware to parse incoming requrest with JSON payloads
+app.use(express.json()); // Middleware to parse incoming request with JSON payloads
+app.use(cookieParser()); // Middleware to parse incoming request cookies
 
 app.post("/signup", async (req, res) => {
     try{
@@ -35,18 +38,22 @@ app.post("/signup", async (req, res) => {
 app.post("/login", async (req, res) => {
     try{
         const {emailId, password} = req.body;
-        console.log(emailId, password);
         if(!validator.isEmail(emailId)){
             throw new Error("Invalid email");
         }
         const user = await User.findOne({emailId : emailId});
-        console.log("user: "+ user)
         if(!user){
             throw new Error("Emails Id not present in Database");
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if(isPasswordValid){
+            // Create JWT token
+            const token = await jwt.sign({_id : user._id}, "DEV@Tinder$17");
+
+            // Add the token to cookie and send the response back to the user
+            res.cookie("token", token);
+
             res.send("Login successful");
         } 
         else{
@@ -55,6 +62,31 @@ app.post("/login", async (req, res) => {
 
     } catch(err) { 
         res.status(400).send("Error " + err.message); 
+    }
+})
+
+app.get("/profile", async (req, res) => {
+    try{
+        const cookies = req.cookies;
+        const {token} = cookies;
+        // Validate if the token is present in the cookies
+        if(!token){
+            throw new Error("Token not present in the cookies");
+        }
+
+        // Read the token and get the data (here _id) from the token
+        const decodedMessage = await jwt.verify(token, "DEV@Tinder$17");
+        const { _id }  = decodedMessage;
+
+        // Fetch the user data from the database using the _id
+        const user = await User.findById(_id);
+        if(!user){
+            throw new Error("User not found");
+        }
+        res.send(user);
+
+    } catch(err){
+        res.status(400).send('Error: ' + err.message);
     }
 })
 
