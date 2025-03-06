@@ -4,13 +4,12 @@ const User = require('./models/user');
 
 const app = express();
 
+app.use(express.json()); // Middleware to parse incoming requrest with JSON payloads
+
 app.post("/signup", async (req, res) => {
-    const user = new User({
-        firstName: "Sachin",
-        lastName: "Tendulkar",
-        emailId: "sachin@gmal.com",
-        password: "sachin"
-    });
+    
+   // Creating new instance of User model
+   const user = new User(req.body);
 
     try{
         await user.save();
@@ -18,7 +17,6 @@ app.post("/signup", async (req, res) => {
     } catch(err){
         res.status(400).send("Error in saving user", err);
     }
-    
 })
 
 connectDB()
