@@ -5,7 +5,6 @@ const User = require('./models/user');
 const { validateSignupData } = require('./utils/validation');
 const validator = require('validator');
 const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
 const { userAuth } = require('./middlewares/auth');
 
 const app = express();
@@ -46,11 +45,11 @@ app.post("/login", async (req, res) => {
         if(!user){
             throw new Error("Emails Id not present in Database");
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await user.validatePassword(password);
 
         if(isPasswordValid){
             // Create JWT token
-            const token = await jwt.sign({_id : user._id}, "DEV@Tinder$17", {expiresIn: "1d"});
+            const token = await user.getJWTToken();
 
             // Add the token to cookie and send the response back to the user
             res.cookie("token", token, 
@@ -81,9 +80,8 @@ app.get("/profile", userAuth, async (req, res) => {
 })
 
 app.post("/sendConnectionRequest", userAuth, async (req, res) => {
-    console.log(req.body)
-    const {emailId} = req.body;
-    console.log("logged in user is " + emailId);
+    const {firstName, lastName} = req.user;
+    console.log("logged in user is " + firstName + " " + lastName);
 })
 
 connectDB()
