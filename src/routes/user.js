@@ -68,6 +68,11 @@ userRouter.get("/user/feed", userAuth, async (req, res) => {
     try{
         const loggedInUser = req.user;
 
+        const page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+        limit = limit > 50 ? 50 : limit;
+        
+        const skip = (page - 1)*limit;
         // LoggedIn user should see all the profiles except following:
         // Profiles to whom connection request is already sent or received
         // Ignored profiles
@@ -91,7 +96,10 @@ userRouter.get("/user/feed", userAuth, async (req, res) => {
                 { _id: { $nin: Array.from(hideUsersFromFeed) } },       // FInding all the profiles in the database whose Id is not in hideuserFromFeed array
                 { _id: { $ne: loggedInUser._id } }                      // Ignore self profile
             ]
-        }).select(USER_SAFE_DATA);
+        })
+        .select(USER_SAFE_DATA)
+        .skip(skip)
+        .limit(limit);
         
         res.send(user);
 
