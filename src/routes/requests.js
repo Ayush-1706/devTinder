@@ -5,7 +5,7 @@ const ConnectionRequest = require('../models/connectionRequest');
 const User = require('../models/user');
 
 
-// Connection request - interested or ignored
+// Send connection request - interested or ignored
 requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
     try{
         const fromUserId = req.user._id;
@@ -41,11 +41,45 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
         const connectionRequest = new ConnectionRequest({fromUserId, toUserId, status});
         const data = await connectionRequest.save();
         res.json({
-            message: "Request sent with " + status + "status",
+            message: "Request sent with " + status + " status",
             data
         })
     } catch(err) {
         res.status(400).send("Connection error " + err.message);
+    }
+})
+
+// Review received connection request - accepted or rejected
+requestRouter.post("/request/review/:status/:requestId", userAuth, async (req, res) => {
+    try{
+        const loggedInUser = req.user;
+        const { status, requestId } = req.params;
+
+        // Validate the status
+        const allowedStatus = ["accepted", "rejected"];
+        if(!allowedStatus.includes(status)){
+            return res.status(400).json({message: "Status is not allowed"})
+        }
+        
+        // Sender => Receiver (No user other than receiver should accept or reject the connection request).
+        // toUserId or receiver should be logged in to accept/review the request.
+        // status should be interested. User cannot review or accept ignored request.
+        // request id should be valid.
+        const connectionRequest = await ConnectionRequest.findOne({
+            _id: requestId,
+            toUserId: loggedInUser._id,
+            status: "interested"
+        });
+
+        if(!connectionRequest){
+            return res.status(400).json({message: "Connection request not found"});
+        }
+
+        connectionRequest.status = status;
+        const data = await connectionRequest.save();
+        res.json({message: "Connection request "+status, data});
+    } catch(err) {
+        res.status(400).send("Review request error: " + err.message);
     }
 })
 
