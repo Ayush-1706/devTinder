@@ -2,6 +2,7 @@ const express = require('express');
 const { userAuth } = require('../middlewares/auth');
 const userRouter = express.Router();
 const ConnectionRequest = require('../models/connectionRequest');
+const User = require('../models/user');
 
 const USER_SAFE_DATA = 'firstName lastName gender photoUrl about skills'
 // Get all the pending connection request for the loggedIn user
@@ -40,7 +41,7 @@ userRouter.get("/user/connection", userAuth, async (req, res) => {
         const connectionRequest = await ConnectionRequest.find({
             $or: [
                 { toUserId: loggedInUser._id, status: "accepted" },
-                { fromUser: loggedInUser._id, status: "accepted" }
+                { fromUserId: loggedInUser._id, status: "accepted" }
             ]
         }).populate("fromUserId", USER_SAFE_DATA)
         .populate("toUserId", USER_SAFE_DATA);
@@ -59,6 +60,43 @@ userRouter.get("/user/connection", userAuth, async (req, res) => {
 
     } catch(err){
         res.status(400).send("Error in fetching all the connections: "+err.message);
+    }
+})
+
+// Fetch the feed for the loggedIn user
+userRouter.get("/user/feed", userAuth, async (req, res) => {
+    try{
+        const loggedInUser = req.user;
+
+        // LoggedIn user should see all the profiles except following:
+        // Profiles to whom connection request is already sent or received
+        // Ignored profiles
+        // Profiles who are already the connections
+        // Self profile
+
+
+        const connectionRequest = await ConnectionRequest.find({
+            $or: [{ toUserId: loggedInUser._id }, { fromUserId: loggedInUser._id }]
+        }).select("fromUserId toUserId");            // select user to filter out data from results
+
+        // Creating a unique set of user Ids which we need to hide from feed
+        const hideUsersFromFeed = new Set();
+        connectionRequest.forEach((req) => {
+            hideUsersFromFeed.add(req.fromUserId.toString());
+            hideUsersFromFeed.add(req.toUserId.toString());
+        });
+
+        const user = await User.find({
+            $and: [
+                { _id: { $nin: Array.from(hideUsersFromFeed) } },       // FInding all the profiles in the database whose Id is not in hideuserFromFeed array
+                { _id: { $ne: loggedInUser._id } }                      // Ignore self profile
+            ]
+        }).select(USER_SAFE_DATA);
+        
+        res.send(user);
+
+    } catch(err){
+        res.status(400).send("Failed fetching feed: " + err.message)
     }
 })
 
