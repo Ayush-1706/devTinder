@@ -6,7 +6,7 @@ const userAuth = async (req, res, next) => {
         const {token} = req.cookies;
         // Validate if the token is present in the cookies
         if(!token){
-            throw new Error("Token not present in the cookies");
+            return res.status(401).send("Please login");
         }
 
         // Read the token and get the data (here _id) from the token
