@@ -4,7 +4,7 @@ const userRouter = express.Router();
 const ConnectionRequest = require('../models/connectionRequest');
 const User = require('../models/user');
 
-const USER_SAFE_DATA = 'firstName lastName gender photoUrl about skills'
+const USER_SAFE_DATA = 'firstName lastName gender age photoUrl about skills'
 // Get all the pending connection request for the loggedIn user
 userRouter.get("/user/requests/received", userAuth, async (req, res) => {
     try{
@@ -67,7 +67,6 @@ userRouter.get("/user/connection", userAuth, async (req, res) => {
 userRouter.get("/user/feed", userAuth, async (req, res) => {
     try{
         const loggedInUser = req.user;
-
         const page = parseInt(req.query.page) || 1;
         let limit = parseInt(req.query.limit) || 10;
         limit = limit > 50 ? 50 : limit;
