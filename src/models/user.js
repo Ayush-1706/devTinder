@@ -56,7 +56,8 @@ const userSchema = new mongoose.Schema({
             if(!validator.isURL(value)){
                 throw new Error("Invalid link for photo url" + value);
             }
-        }
+        },
+        default: "https://www.pngitem.com/pimgs/m/272-2720656_user-profile-dummy-hd-png-download.png"
     },
     about : {
         type : String,
